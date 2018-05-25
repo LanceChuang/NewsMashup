@@ -32,9 +32,17 @@ def index():
 @app.route("/articles")
 def articles():
     """Look up articles for geo"""
+    
+    # retrieve geo argument
+    try:
+        geo = request.args.get("geo")
+    except :
+        raise RuntimeError("Please enter valid geolocation")
 
-    # TODO
-    return jsonify([])
+    articles = lookup(geo)[:5] # first 5 articles
+    print("articles:", articles) # [ {}, {}.......]
+
+    return jsonify(articles)
 
 
 @app.route("/search")
