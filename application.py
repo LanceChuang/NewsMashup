@@ -7,7 +7,7 @@ from helpers import lookup
 
 # Configure application
 app = Flask(__name__)
-
+app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///mashup.db")
 
@@ -32,25 +32,44 @@ def index():
 @app.route("/articles")
 def articles():
     """Look up articles for geo"""
-    
     # retrieve geo argument
     try:
         geo = request.args.get("geo")
     except :
         raise RuntimeError("Please enter valid geolocation")
 
-    articles = lookup(geo)[:5] # first 5 articles
+    articles = lookup(geo)
     print("articles:", articles) # [ {}, {}.......]
+    # get first 5 articles
+    if len(articles) >= 5:
+        return jsonify(articles[:5])
 
     return jsonify(articles)
+
 
 
 @app.route("/search")
 def search():
     """Search for places that match query"""
+    try:
+        query = request.args.get("q") + "%" # % can match any num of char
+    except :
+        raise RuntimeError("Please enter valid query")
 
-    # TODO
-    return jsonify([])
+    print("QUERY: ", query)
+    # fetch rows from postal code, city or state
+    places = db.execute("SELECT * FROM places WHERE postal_code LIKE :q \
+                        OR place_name LIKE :q \
+                        OR admin_name1 LIKE :q \
+                        OR admin_name2 LIKE :q \
+                        LIMIT 10", q=query)
+
+
+    # # return up to 10 places
+    # if len(places) >= 10:
+    #     return jsonify(places[:10])
+
+    return jsonify(places)
 
 
 @app.route("/update")
