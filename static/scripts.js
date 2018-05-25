@@ -78,7 +78,7 @@ function addMarker(place)
     var marker = new google.maps.Marker({
           position: myplace,
           map: map,
-          draggable: true,
+          draggable: false,
           title: name,
           icon: image
         });
@@ -90,7 +90,7 @@ function addMarker(place)
         if (!$.isEmptyObject(articles))
         {
             var content = "<ul>";
-            for (var i=0; i < articles.length; i++) {
+            for (let i=0; i < articles.length; i++) {
 
                 // append news with link and title to unorder list
                 content += "<li><a target='_NEW' href='" + articles[i].link +"'>"
@@ -138,7 +138,7 @@ function configure()
         minLength: 1
     },
     {
-        display: function(suggestion) { return null; },
+        display: function(ppap) { return null; },
         limit: 10,
         source: search, // function that the plugin will call as soon as the user starts typing
         templates: {
@@ -184,8 +184,12 @@ function configure()
 // Remove markers from map
 function removeMarkers()
 {
-    // To Do
-
+    // Remove all markers from map and delete them
+    for (let i=0; i< markers.length;i++) {
+        markers[i].setMap(null); // Sets the map on all markers == null in the array.
+    }
+    markers = [];
+    console.log("markers array:" + markers);
 }
 
 
