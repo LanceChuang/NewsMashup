@@ -1,6 +1,7 @@
 import os
 import re
 from flask import Flask, jsonify, render_template, request
+from flask_jsglue import JSGlue
 
 from cs50 import SQL
 from helpers import lookup
@@ -11,6 +12,8 @@ app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 # Configure CS50 Library to use SQLite database
 db = SQL("sqlite:///mashup.db")
 
+# Init JSGlue
+JSGlue(app)
 
 # Ensure responses aren't cached
 @app.after_request
@@ -52,24 +55,50 @@ def articles():
 def search():
     """Search for places that match query"""
     try:
-        query = request.args.get("q") + "%" # % can match any num of char
+        query = request.args.get("q") # + "%" # % can match any num of char
     except :
         raise RuntimeError("Please enter valid query")
 
-    print("QUERY: ", query)
-    # fetch rows from postal code, city or state
-    places = db.execute("SELECT * FROM places WHERE postal_code LIKE :q \
+    queryList = []
+
+
+    if "," not in query:
+        query += "%"
+        places = db.execute("SELECT * FROM places WHERE postal_code LIKE :q \
+                            OR place_name LIKE :q \
+                            OR admin_name1 LIKE :q \
+                            OR admin_name2 LIKE :q \
+                            LIMIT 10", q=query)
+        queryList = places
+
+    else:
+        # print("query:", query)
+        # deal with multiple query inputs
+        for attr in query.split(","):
+            attr = attr.lstrip(" ")
+            attr += "%"
+            places = db.execute("SELECT * FROM places WHERE postal_code LIKE :q \
                         OR place_name LIKE :q \
                         OR admin_name1 LIKE :q \
                         OR admin_name2 LIKE :q \
-                        LIMIT 10", q=query)
+                        LIMIT 10", q=attr)
+            # print("places : ", places)
+            queryList.extend([place for place in places])
+        # print("queryList:", queryList)
+    # print("QUERY: ", query)
+    # fetch rows from postal code, city or state
+    # places = db.execute("SELECT * FROM places WHERE postal_code LIKE :q \
+    #                     OR place_name LIKE :q \
+    #                     OR admin_name1 LIKE :q \
+    #                     OR admin_name2 LIKE :q \
+    #                     LIMIT 10", q=query)
 
 
     # # return up to 10 places
     # if len(places) >= 10:
     #     return jsonify(places[:10])
-
-    return jsonify(places)
+    # print(queryList)
+    return jsonify(queryList[:10])
 
 
 @app.route("/update")
