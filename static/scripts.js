@@ -52,6 +52,7 @@ $(document).ready(function() {
     let canvas = $("#map-canvas").get(0);
 
     // Instantiate map
+    // Injecting it into the DOM node, configured per options
     map = new google.maps.Map(canvas, options);
 
     // Configure UI once Google Map is idle (i.e., loaded)
@@ -63,7 +64,51 @@ $(document).ready(function() {
 // Add marker for place to map
 function addMarker(place)
 {
-    // TODO
+    console.log("Places: " + place)
+
+    // extract the place latitude and longitude
+    var myplace = new google.maps.LatLng(place["latitude"], place["longitude"]);
+    var name = place.place_name + ", " + place.admin_name1 + ", " + place.postal_code
+    // console.log(name)
+
+    // icon for the marker
+    var image = "http://maps.google.com/mapfiles/kml/pal2/icon31.png";
+
+    // Instantiate markers
+    var marker = new google.maps.Marker({
+          position: myplace,
+          map: map,
+          draggable: true,
+          title: name,
+          icon: image
+        });
+
+    // get articles for place
+    $.getJSON(Flask.url_for("articles"), {geo: place.postal_code}, function(articles) {
+
+        // check if obj received is empty
+        if (!$.isEmptyObject(articles))
+        {
+            var content = "<ul>";
+            for (var i=0; i < articles.length; i++) {
+
+                // append news with link and title to unorder list
+                content += "<li><a target='_NEW' href='" + articles[i].link +"'>"
+                + articles[i].title + "</a></li>"
+            }
+
+        }
+
+        content += "</ul>"
+        // console.log("content:" + content)
+        // listen for clicks on markers
+        google.maps.event.addListener(marker, "click", function() {
+            showInfo(marker, content);
+        });
+
+    });
+    // add marker
+    markers.push(marker);
 }
 
 
@@ -71,6 +116,7 @@ function addMarker(place)
 function configure()
 {
     // Update UI after map has been dragged
+    // dragend is "fired" (i.e., broadcasted) "when the user stops dragging the map."
     google.maps.event.addListener(map, "dragend", function() {
 
         // If info window isn't open
@@ -94,11 +140,11 @@ function configure()
     {
         display: function(suggestion) { return null; },
         limit: 10,
-        source: search,
+        source: search, // function that the plugin will call as soon as the user starts typing
         templates: {
             suggestion: Handlebars.compile(
                 "<div>" +
-                "TODO" +
+                "<div>{{place_name}}, {{admin_name1}}, {{postal_code}},{{admin_name2}} </div>"+
                 "</div>"
             )
         }
@@ -122,8 +168,8 @@ function configure()
     // Re-enable ctrl- and right-clicking (and thus Inspect Element) on Google Map
     // https://chrome.google.com/webstore/detail/allow-right-click/hompjdfbfmmmgflfjdlnkohcplmboaeo?hl=en
     document.addEventListener("contextmenu", function(event) {
-        event.returnValue = true; 
-        event.stopPropagation && event.stopPropagation(); 
+        event.returnValue = true;
+        event.stopPropagation && event.stopPropagation();
         event.cancelBubble && event.cancelBubble();
     }, true);
 
@@ -138,11 +184,14 @@ function configure()
 // Remove markers from map
 function removeMarkers()
 {
-    // TODO
+    // To Do
+
 }
 
 
 // Search database for typeahead's suggestions
+//  text box value  is passed to search as query
+// asyncResults: callback , search should call as soon as it’s done searching for matches
 function search(query, syncResults, asyncResults)
 {
     // Get places matching query (asynchronously)
@@ -150,7 +199,7 @@ function search(query, syncResults, asyncResults)
         q: query
     };
     $.getJSON("/search", parameters, function(data, textStatus, jqXHR) {
-     
+
         // Call typeahead's callback with search results (i.e., places)
         asyncResults(data);
     });
@@ -184,10 +233,10 @@ function showInfo(marker, content)
 
 
 // Update UI's markers
-function update() 
+function update()
 {
     // Get map's bounds
-    let bounds = map.getBounds();
+    let bounds = map.getBounds(); // current bound (top-right & bottom left)
     let ne = bounds.getNorthEast();
     let sw = bounds.getSouthWest();
 
